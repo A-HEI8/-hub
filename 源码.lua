@@ -1,11 +1,3 @@
---[[
-  兔小黑🐰 · Roblox 手机端辅助脚本
-  作者：兔小黑
-  交流群：1124808244
-  UI库：WasUIPro (github.com/WasKKal/WasUI-For-Roblox)
-  本脚本完全免费，禁止倒卖
-]]
-
 local Players=game:GetService("Players")
 local UIS=game:GetService("UserInputService")
 local RS=game:GetService("RunService")
@@ -20,7 +12,6 @@ W:SetDefaultTheme("Dark")W:SetDefaultRainbowMode("流动")W:SetLanguage("中文"
 local _N=W.Notify
 W.Notify=function(s,o)if o and o.Title then o.Title="兔小黑🐰 · "..tostring(o.Title)end return _N(s,o)end
 local MW=W:CreateWindow({Title="兔小黑🐰",WelcomeText="脚本演示.lua",MinimizedText="兔小黑🐰",Theme="Dark",RainbowMode="流动",DialogTitle="确认关闭",GroupText="加入兔小黑🐰群",GroupCopy="1124808244",SnowEnabled=false,Folder="TuXiaoHei_Config",TitleTag={{text="ai制作",backgroundColor=Color3.fromRGB(255,130,180),textColor=Color3.new(1,1,1)}}})
-
 local ESPC={Enabled=false,Boxes=true,Names=true,Distance=true,Skeleton=true,Weapons=true,AimLine=true,LookingAtYou=true,Shield=true,Offscreen=true,Tracers=false,Velocity=false,TeamCheck=false,TeamAttributeName="Team",MaxDist=2000}
 do
 local EP=game:GetService("Players")local ER=game:GetService("RunService")local EL=EP.LocalPlayer
@@ -119,7 +110,6 @@ end)
 EP.PlayerAdded:Connect(function(p)p.CharacterAdded:Connect(function(c)ash(c)end)end)
 for _,p in pairs(EP:GetPlayers())do if p~=EL then p.CharacterAdded:Connect(function(c)ash(c)end)end end
 end
-
 local T1=MW:Tab({Title="信息"})
 T1:Paragraph({Title="作者",Desc="兔小黑🐰出品",Icon="user"})
 T1:Paragraph({Title="QQ群",Desc="1124808244",Icon="users"})
@@ -128,7 +118,6 @@ T1:Paragraph({Title="用户ID",Desc=tostring(LP.UserId),Icon="hash"})
 T1:Paragraph({Title="账号年龄",Desc=tostring(LP.AccountAge).." 天",Icon="calendar"})
 T1:Paragraph({Title="执行器",Desc=tostring(identifyexecutor and identifyexecutor() or "未知"),Icon="terminal"})
 T1:Button({Text="复制群号",Icon="copy",Callback=function()pcall(function()setclipboard("1124808244")end)N("提示","已复制",2)end})
-
 local T2=MW:Tab({Title="通用"})
 local C2F=T2:Category({Title="飞行",IconName="send"})
 C2F:Paragraph({Title="飞行功能",Desc="点击下面按钮加载飞行脚本",Icon="info"})
@@ -150,7 +139,6 @@ else LP.CameraMode=Enum.CameraMode.Classic LP.CameraMaxZoomDistance=128 LP.Camer
 end})
 C2C:Paragraph({Title="放大距离",Desc="默认128。数字改大镜头能拉更远，输入后按回车生效",Icon="info"})
 C2C:TextInput({Title="",Placeholder="输入最大视距，如 500",Value="128",Callback=function(t)local n=tonumber(t)if n then LP.CameraMaxZoomDistance=n N("相机","最大视距 "..n,2)end end})
-
 local T3=MW:Tab({Title="玩家"})
 local C3L=T3:Category({Title="本地玩家",IconName="user"})
 C3L:Paragraph({Title="移动速度",Desc="默认16。数字改大跑得快，输入后按回车生效",Icon="info"})
@@ -174,7 +162,126 @@ pDD=C3P:Dropdown({Title="选择玩家",Values=pList,Value=pList[1],Multi=false,C
 C3P:Button({Text="刷新列表",Icon="refresh-cw",Callback=function()pList=bldP()pDD:UpdateOptions(pList,pList[1])selP=pList[1]N("刷新","共 "..#pList.." 名",2)end})
 C3P:Button({Text="传送到所选玩家",Icon="send",Callback=function()if not selP or selP=="无" then N("错误","请先选",2)return end local t=Players:FindFirstChild(selP)if t and t.Character and LP.Character then LP.Character:PivotTo(t.Character:GetPivot())N("传送","已传送",2)end end})
 C3P:Button({Text="拉到身边",Icon="arrow-down",Callback=function()if not selP or selP=="无" then N("错误","请先选",2)return end local t=Players:FindFirstChild(selP)if t and t.Character and LP.Character then t.Character:PivotTo(LP.Character:GetPivot())N("拉取","已拉",2)end end})
-
+C3P:Paragraph({Title="甩飞",Desc="强力甩飞，自动保存位置，结束归位。自己也会飞，正常",Icon="info"})
+local function TXH_SkidFling(TargetPlayer)
+local Player=LP
+local Character=Player.Character
+local Humanoid=Character and Character:FindFirstChildOfClass("Humanoid")
+local RootPart=Humanoid and Humanoid.RootPart
+if not(Character and Humanoid and RootPart)then return end
+local TCharacter=TargetPlayer.Character
+if not TCharacter then return end
+local THumanoid=TCharacter:FindFirstChildOfClass("Humanoid")
+local TRootPart=THumanoid and THumanoid.RootPart
+local THead=TCharacter:FindFirstChild("Head")
+local Accessory=TCharacter:FindFirstChildOfClass("Accessory")
+local Handle=Accessory and Accessory:FindFirstChild("Handle")
+if RootPart.Velocity.Magnitude<50 then getgenv().TXH_OldPos=RootPart.CFrame end
+if THumanoid and THumanoid.Sit then return end
+if THead then workspace.CurrentCamera.CameraSubject=THead
+elseif Handle then workspace.CurrentCamera.CameraSubject=Handle
+elseif THumanoid and TRootPart then workspace.CurrentCamera.CameraSubject=THumanoid end
+if not TCharacter:FindFirstChildWhichIsA("BasePart")then return end
+local oldFPDH=workspace.FallenPartsDestroyHeight
+local function FPos(BasePart,Pos,Ang)
+RootPart.CFrame=CFrame.new(BasePart.Position)*Pos*Ang
+Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position)*Pos*Ang)
+RootPart.Velocity=Vector3.new(9e7,9e7*10,9e7)
+RootPart.RotVelocity=Vector3.new(9e8,9e8,9e8)
+end
+local function SFBasePart(BasePart)
+local TimeToWait=2
+local Time=tick()
+local Angle=0
+repeat
+if RootPart and THumanoid then
+if BasePart.Velocity.Magnitude<50 then
+Angle=Angle+100
+FPos(BasePart,CFrame.new(0,1.5,0)+THumanoid.MoveDirection*BasePart.Velocity.Magnitude/1.25,CFrame.Angles(math.rad(Angle),0,0))task.wait()
+FPos(BasePart,CFrame.new(0,-1.5,0)+THumanoid.MoveDirection*BasePart.Velocity.Magnitude/1.25,CFrame.Angles(math.rad(Angle),0,0))task.wait()
+FPos(BasePart,CFrame.new(2.25,1.5,-2.25)+THumanoid.MoveDirection*BasePart.Velocity.Magnitude/1.25,CFrame.Angles(math.rad(Angle),0,0))task.wait()
+FPos(BasePart,CFrame.new(-2.25,-1.5,2.25)+THumanoid.MoveDirection*BasePart.Velocity.Magnitude/1.25,CFrame.Angles(math.rad(Angle),0,0))task.wait()
+FPos(BasePart,CFrame.new(0,1.5,0)+THumanoid.MoveDirection,CFrame.Angles(math.rad(Angle),0,0))task.wait()
+FPos(BasePart,CFrame.new(0,-1.5,0)+THumanoid.MoveDirection,CFrame.Angles(math.rad(Angle),0,0))task.wait()
+else
+FPos(BasePart,CFrame.new(0,1.5,THumanoid.WalkSpeed),CFrame.Angles(math.rad(90),0,0))task.wait()
+FPos(BasePart,CFrame.new(0,-1.5,-THumanoid.WalkSpeed),CFrame.Angles(0,0,0))task.wait()
+FPos(BasePart,CFrame.new(0,1.5,THumanoid.WalkSpeed),CFrame.Angles(math.rad(90),0,0))task.wait()
+FPos(BasePart,CFrame.new(0,1.5,TRootPart.Velocity.Magnitude/1.25),CFrame.Angles(math.rad(90),0,0))task.wait()
+FPos(BasePart,CFrame.new(0,-1.5,-TRootPart.Velocity.Magnitude/1.25),CFrame.Angles(0,0,0))task.wait()
+FPos(BasePart,CFrame.new(0,1.5,TRootPart.Velocity.Magnitude/1.25),CFrame.Angles(math.rad(90),0,0))task.wait()
+end
+else break end
+until BasePart.Velocity.Magnitude>500 or BasePart.Parent~=TargetPlayer.Character or TargetPlayer.Parent~=Players or not TargetPlayer.Character==TCharacter or THumanoid.Sit or Humanoid.Health<=0 or tick()>Time+TimeToWait
+end
+workspace.FallenPartsDestroyHeight=0/0
+local BV=Instance.new("BodyVelocity")
+BV.Name="TXHVel"
+BV.Parent=RootPart
+BV.Velocity=Vector3.new(9e8,9e8,9e8)
+BV.MaxForce=Vector3.new(1/0,1/0,1/0)
+Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated,false)
+if TRootPart and THead then
+if (TRootPart.CFrame.p-THead.CFrame.p).Magnitude>5 then SFBasePart(THead)else SFBasePart(TRootPart)end
+elseif TRootPart then SFBasePart(TRootPart)
+elseif THead then SFBasePart(THead)
+elseif Handle then SFBasePart(Handle)end
+BV:Destroy()
+Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated,true)
+workspace.CurrentCamera.CameraSubject=Humanoid
+workspace.FallenPartsDestroyHeight=oldFPDH
+repeat
+RootPart.CFrame=getgenv().TXH_OldPos*CFrame.new(0,.5,0)
+Character:SetPrimaryPartCFrame(getgenv().TXH_OldPos*CFrame.new(0,.5,0))
+Humanoid:ChangeState("GettingUp")
+for _,x in ipairs(Character:GetChildren())do if x:IsA("BasePart")then x.Velocity=Vector3.new()x.RotVelocity=Vector3.new()end end
+task.wait()
+until (RootPart.Position-getgenv().TXH_OldPos.p).Magnitude<25
+end
+C3P:Button({Text="甩飞所选玩家",Icon="alert-triangle",Callback=function()
+if not selP or selP=="无" then N("错误","请先选玩家",2)return end
+local t=Players:FindFirstChild(selP)
+if not t then N("错误","目标无效",2)return end
+local ok,err=pcall(function()TXH_SkidFling(t)end)
+if ok then N("甩飞","已甩 "..selP,2)else N("失败",tostring(err):sub(1,80),4)end
+end})
+C3P:Paragraph({Title="循环甩飞",Desc="持续甩飞所选玩家。很猛但容易被踢",Icon="info"})
+local autoFlingOn=false
+C3P:Toggle({Title="循环甩飞",Value=false,FeatureName="循环甩飞",Icon="repeat",Callback=function(t)
+autoFlingOn=t
+if t then
+if not selP or selP=="无" then N("错误","请先选玩家",2)autoFlingOn=false return false end
+task.spawn(function()
+while autoFlingOn do
+task.wait()
+pcall(function()
+local target=Players:FindFirstChild(selP)
+if target then TXH_SkidFling(target)end
+end)
+end
+end)
+N("循环甩飞","已开启",2)
+else N("循环甩飞","已关闭",2)end
+end})
+C3P:Paragraph({Title="自瞄目标",Desc="视角锁定所选玩家",Icon="info"})
+local aimbotOn=false
+C3P:Toggle({Title="自瞄选择目标",Value=false,FeatureName="自瞄目标",Icon="crosshair",Callback=function(a)
+aimbotOn=a
+if a then
+task.spawn(function()
+while aimbotOn do
+local Cam2=workspace.CurrentCamera
+local tp=Players:FindFirstChild(selP)
+local target=tp and tp.Character and tp.Character:FindFirstChild("HumanoidRootPart")
+if target and Cam2 then
+local lv=(target.Position-Cam2.CFrame.Position).Unit
+Cam2.CFrame=CFrame.new(Cam2.CFrame.Position,Cam2.CFrame.Position+lv)
+end
+task.wait()
+end
+end)
+end
+end})
 local T4=MW:Tab({Title="透视"})
 local C4V=T4:Category({Title="夜视",IconName="sun"})
 C4V:Paragraph({Title="夜视",Desc="开启后环境变亮，夜里也能看清",Icon="info"})
@@ -200,7 +307,6 @@ C4E:Paragraph({Title="队伍属性名",Desc="游戏里队伍的属性名，常�
 C4E:Dropdown({Title="",Values={"Team","Side","Faction","PlayerTeam","TeamName","Lobby","阵营","队伍"},Value="Team",Multi=false,Callback=function(t)ESPC.TeamAttributeName=t end})
 C4E:Paragraph({Title="最大显示距离",Desc="默认2000，越大越吃性能",Icon="info"})
 C4E:Slider({Title="最大距离",Min=500,Max=5000,Default=2000,Ticks=45,Callback=function(v)ESPC.MaxDist=v end})
-
 local TM=MW:Tab({Title="消息"})
 local CM=TM:Category({Title="自动发言设置",IconName="message-circle"})
 local sayMessage=""
@@ -233,7 +339,6 @@ end)
 N("消息","开始发送",2)
 else if speakThread then task.cancel(speakThread)speakThread=nil end N("消息","已停止",2)end
 end})
-
 local T5=MW:Tab({Title="杂项"})
 local C5=T5:Category({Title="快捷操作",IconName="zap"})
 C5:Paragraph({Title="刷新角色",Desc="让角色重生一次，相当于自杀复活",Icon="info"})
@@ -243,7 +348,6 @@ C5:Button({Text="重新加入",Icon="log-out",Callback=function()game:GetService
 C5:Button({Text="复制群号",Icon="copy",Callback=function()pcall(function()setclipboard("1124808244")end)N("提示","已复制",2)end})
 C5:Paragraph({Title="显示FPS",Desc="开启后屏幕右上角显示当前帧率",Icon="info"})
 C5:Toggle({Title="显示FPS",Value=false,FeatureName="显示帧率",Icon="activity",Callback=function(s)if s then local g=Instance.new("ScreenGui")g.Name="TXH_FPS"g.ResetOnSpawn=false pcall(function()g.Parent=CG end)if not g.Parent then g.Parent=LP:WaitForChild("PlayerGui")end local l=Instance.new("TextLabel")l.Parent=g l.BackgroundTransparency=1 l.Position=UDim2.new(.78,0,0,0)l.Size=UDim2.new(0,130,0,30)l.Font=Enum.Font.GothamBold l.TextSize=14 l.TextColor3=Color3.new(1,1,1)l.TextStrokeTransparency=0 l.Text="FPS: 0"local n=0 RS.RenderStepped:Connect(function(dt)n=n+1 if n>=10 then l.Text="FPS: "..math.floor(1/dt)n=0 end end)else local g=CG:FindFirstChild("TXH_FPS")if g then g:Destroy()end local g2=LP:FindFirstChild("PlayerGui")if g2 then local g3=g2:FindFirstChild("TXH_FPS")if g3 then g3:Destroy()end end end end})
-
 local TS=MW:Tab({Title="脚本大全"})
 local CS=TS:Category({Title="外部脚本加载器",IconName="download"})
 CS:Paragraph({Title="提示",Desc="点按钮加载对应脚本，弹出的是脚本自带的UI，跟兔小黑同时存在",Icon="info"})
@@ -255,6 +359,5 @@ CS:Button({Text="R15🦌管",Icon="play",Callback=function()local ok,err=pcall(f
 CS:Button({Text="皮脚本",Icon="play",Callback=function()local ok,err=pcall(function()getgenv().XiaoPi="皮脚本QQ群1002100032" loadstring(game:HttpGet("https://raw.githubusercontent.com/xiaopi77/xiaopi77/main/QQ1002100032-Roblox-Pi-script.lua"))()end)if ok then N("脚本大全","皮脚本加载成功",2)else N("失败",tostring(err):sub(1,80),4)end end})
 CS:Button({Text="BS黑洞脚本",Icon="play",Callback=function()local ok,err=pcall(function()BS="\104\116\116\112\115\58\47\47\103\105\116\101\101\46\99\111\109\47\66\83\95\115\99\114\105\112\116\47\115\99\114\105\112\116\47\114\97\119\47\109\97\115\116\101\114\47\66\83\95\83\99\114\105\112\116\46\76\117\97\117" loadstring(game:HttpGet(BS))()end)if ok then N("脚本大全","BS黑洞加载成功",2)else N("失败",tostring(err):sub(1,80),4)end end})
 CS:Paragraph({Title="说明",Desc="所有脚本均来自网络，用之前请用小号测试",Icon="alert-triangle"})
-
 W:Notify({Title="加载完成",Content="兔小黑🐰 已就绪",Duration=4})
 print("[兔小黑🐰] 加载完成 | 群:1124808244")
