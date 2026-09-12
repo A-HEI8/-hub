@@ -263,25 +263,7 @@ end)
 N("循环甩飞","已开启",2)
 else N("循环甩飞","已关闭",2)end
 end})
-C3P:Paragraph({Title="自瞄目标",Desc="视角锁定所选玩家",Icon="info"})
-local aimbotOn=false
-C3P:Toggle({Title="自瞄选择目标",Value=false,FeatureName="自瞄目标",Icon="crosshair",Callback=function(a)
-aimbotOn=a
-if a then
-task.spawn(function()
-while aimbotOn do
-local Cam2=workspace.CurrentCamera
-local tp=Players:FindFirstChild(selP)
-local target=tp and tp.Character and tp.Character:FindFirstChild("HumanoidRootPart")
-if target and Cam2 then
-local lv=(target.Position-Cam2.CFrame.Position).Unit
-Cam2.CFrame=CFrame.new(Cam2.CFrame.Position,Cam2.CFrame.Position+lv)
-end
-task.wait()
-end
-end)
-end
-end})
+
 local T4=MW:Tab({Title="透视"})
 local C4V=T4:Category({Title="夜视",IconName="sun"})
 C4V:Paragraph({Title="夜视",Desc="开启后环境变亮，夜里也能看清",Icon="info"})
