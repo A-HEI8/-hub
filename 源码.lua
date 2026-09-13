@@ -117,6 +117,133 @@ lastHP=nil
 N("防摔","已关闭",2)
 end
 end})
+local C2R=T2:Category({Title="旋转恶搞",IconName="refresh-cw"})
+C2R:Paragraph({Title="旋转说明",Desc="开启后角色原地高速旋转（R6/R15 自动适配）",Icon="info"})
+local function TXH_Spin(spinSpeed)
+local c=LP.Character
+if not c then N("错误","无角色",2)return end
+local hum=c:FindFirstChildOfClass("Humanoid")
+if not hum then N("错误","无Humanoid",2)return end
+local hrp=c:FindFirstChild("HumanoidRootPart")
+if not hrp then N("错误","无HRP",2)return end
+task.spawn(function()
+local animId=hum.RigType==Enum.HumanoidRigType.R6 and "rbxassetid://27432686" or "rbxassetid://507776043"
+local anim=Instance.new("Animation")
+anim.AnimationId=animId
+local track=hum:LoadAnimation(anim)
+track:Play()
+track:AdjustSpeed(0)
+local animate=c:FindFirstChild("Animate")
+if animate then animate.Disabled=true end
+local oldSpin=hrp:FindFirstChild("TXH_Spin")
+if oldSpin then oldSpin:Destroy()end
+local spin=Instance.new("BodyAngularVelocity")
+spin.Name="TXH_Spin"
+spin.Parent=hrp
+spin.MaxTorque=Vector3.new(0,math.huge,0)
+spin.AngularVelocity=Vector3.new(0,spinSpeed,0)
+N("旋转","速度 "..spinSpeed.." 已开启",2)
+end)
+end
+C2R:Button({Text="快速旋转",Icon="refresh-cw",Callback=function()TXH_Spin(30)end})
+C2R:Button({Text="极速旋转",Icon="rotate-cw",Callback=function()TXH_Spin(500)end})
+C2R:Button({Text="停止旋转",Icon="square",Callback=function()
+local c=LP.Character
+if c then
+local hrp=c:FindFirstChild("HumanoidRootPart")
+if hrp then
+local sp=hrp:FindFirstChild("TXH_Spin")
+if sp then sp:Destroy()end
+end
+local hum=c:FindFirstChildOfClass("Humanoid")
+if hum then
+local animate=c:FindFirstChild("Animate")
+if animate then animate.Disabled=false end
+for _,t in pairs(hum:GetPlayingAnimationTracks())do
+if t.Animation and(t.Animation.AnimationId:find("27432686")or t.Animation.AnimationId:find("507776043"))then
+t:Stop()
+end
+end
+end
+end
+N("旋转","已停止",2)
+end})
+local C2A=T2:Category({Title="防甩飞",IconName="shield"})
+C2A:Paragraph({Title="防甩飞",Desc="保护自己不被别的脚本甩飞。开启后速度突变会被拦下来",Icon="info"})
+local antiFlingConn=nil
+local antiFlingCharConn=nil
+local antiFlingVelConn=nil
+local origFallenHeight=workspace.FallenPartsDestroyHeight
+C2A:Toggle({Title="防甩飞",Value=false,FeatureName="防甩飞",Icon="shield",Callback=function(s)
+if s then
+origFallenHeight=workspace.FallenPartsDestroyHeight
+if antiFlingConn then antiFlingConn:Disconnect()end
+if antiFlingCharConn then antiFlingCharConn:Disconnect()end
+if antiFlingVelConn then antiFlingVelConn:Disconnect()end
+local function protectChar(char)
+if not char then return end
+local hrp=char:FindFirstChild("HumanoidRootPart")
+local hum=char:FindFirstChildOfClass("Humanoid")
+if not hrp then return end
+if antiFlingVelConn then antiFlingVelConn:Disconnect()end
+antiFlingVelConn=hrp:GetPropertyChangedSignal("Velocity"):Connect(function()
+pcall(function()
+if not s then return end
+if hrp.Velocity.Magnitude>300 then
+hrp.Velocity=Vector3.new(0,0,0)
+hrp.RotVelocity=Vector3.new(0,0,0)
+end
+end)
+end)
+end
+protectChar(LP.Character)
+antiFlingCharConn=LP.CharacterAdded:Connect(function(c)
+task.wait(0.5)
+protectChar(c)
+end)
+antiFlingConn=RS.Heartbeat:Connect(function()
+pcall(function()
+local c=LP.Character
+if not c then return end
+local hrp=c:FindFirstChild("HumanoidRootPart")
+if not hrp then return end
+local hum=c:FindFirstChildOfClass("Humanoid")
+if hum then
+local st=hum:GetState()
+if st==Enum.HumanoidStateType.Physics or st==Enum.HumanoidStateType.Ragdoll then
+hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+end
+end
+if hrp.Velocity.Magnitude>500 then
+hrp.Velocity=Vector3.new(0,0,0)
+hrp.RotVelocity=Vector3.new(0,0,0)
+end
+for _,child in ipairs(hrp:GetChildren())do
+if child:IsA("BodyVelocity")or child:IsA("BodyAngularVelocity")or child:IsA("BodyThrust")then
+if child.Name~="TXHVel"then
+child:Destroy()
+end
+end
+end
+end)
+end)
+N("防甩飞","已开启",2)
+else
+if antiFlingConn then antiFlingConn:Disconnect()antiFlingConn=nil end
+if antiFlingCharConn then antiFlingCharConn:Disconnect()antiFlingCharConn=nil end
+if antiFlingVelConn then antiFlingVelConn:Disconnect()antiFlingVelConn=nil end
+workspace.FallenPartsDestroyHeight=origFallenHeight
+local c=LP.Character
+if c then
+for _,p in ipairs(c:GetDescendants())do
+if p:IsA("BasePart")then
+p.CanCollide=true
+end
+end
+end
+N("防甩飞","已关闭",2)
+end
+end})
 
 local T3=MW:Tab({Title="玩家"})
 local C3L=T3:Category({Title="本地玩家",IconName="user"})
@@ -319,21 +446,365 @@ N("自动互动","已开启",2)
 else N("自动互动","已关闭",2)end
 end})
 
-local T4=MW:Tab({Title="夜视"})
-local C4V=T4:Category({Title="夜视",IconName="sun"})
-C4V:Paragraph({Title="夜视",Desc="开启后环境变亮，夜里也能看清",Icon="info"})
-C4V:Toggle({Title="夜视",Value=false,FeatureName="夜视",Icon="sun",Callback=function(s)
+-- ========== 互动物体高亮（通用版） ==========
+local EMFConn=nil
+local EMFTracked={}
+local EMFConfig={Color=Color3.fromRGB(0,200,255),UseHighlight=true,UseBox=false,ShowLabel=true,LabelText="互动"}
+
+local function emfGetPart(obj)
+    local a=obj
+    for _=1,5 do
+        if not a or a==workspace then return nil end
+        if a:IsA("BasePart") then return a end
+        a=a.Parent
+    end
+    return nil
+end
+
+local function emfMark(part)
+    if not part or EMFTracked[part] then return end
+    if Players:GetPlayerFromCharacter(part) then return end
+    local d={}
+    pcall(function()
+        if EMFConfig.UseHighlight then
+            local h=Instance.new("Highlight")
+            h.Name="TXH_EMF_HL"
+            h.FillColor=EMFConfig.Color
+            h.OutlineColor=EMFConfig.Color
+            h.FillTransparency=0.6
+            h.OutlineTransparency=0
+            h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+            h.Adornee=part
+            h.Parent=part
+            d.hl=h
+        end
+        if EMFConfig.UseBox then
+            local sb=Instance.new("SelectionBox")
+            sb.Name="TXH_EMF_SB"
+            sb.Color3=EMFConfig.Color
+            sb.LineThickness=0.1
+            sb.Adornee=part
+            sb.Parent=part
+            d.sb=sb
+        end
+        if EMFConfig.ShowLabel then
+            local bb=Instance.new("BillboardGui")
+            bb.Name="TXH_EMF_BB"
+            bb.Size=UDim2.new(0,120,0,32)
+            bb.StudsOffset=Vector3.new(0,2.5,0)
+            bb.AlwaysOnTop=true
+            bb.MaxDistance=math.huge
+            bb.Adornee=part
+            local lbl=Instance.new("TextLabel")
+            lbl.Size=UDim2.new(1,0,1,0)
+            lbl.BackgroundTransparency=1
+            lbl.Text=EMFConfig.LabelText
+            lbl.TextColor3=EMFConfig.Color
+            lbl.TextStrokeTransparency=0
+            lbl.TextStrokeColor3=Color3.new(0,0,0)
+            lbl.TextScaled=true
+            lbl.Font=Enum.Font.GothamBold
+            lbl.Parent=bb
+            bb.Parent=part
+            d.bb=bb
+            d.lbl=lbl
+        end
+    end)
+    EMFTracked[part]=d
+end
+
+local function emfUnmark(part)
+    local d=EMFTracked[part]
+    if d then
+        pcall(function() if d.hl then d.hl:Destroy() end end)
+        pcall(function() if d.sb then d.sb:Destroy() end end)
+        pcall(function() if d.bb then d.bb:Destroy() end end)
+        EMFTracked[part]=nil
+    end
+end
+
+local function emfScanAll()
+    for _,obj in ipairs(workspace:GetDescendants())do
+        if obj:IsA("ProximityPrompt") or obj:IsA("ClickDetector") then
+            local part=emfGetPart(obj)
+            if part then emfMark(part) end
+        end
+    end
+end
+
+local function emfOnAdded(obj)
+    if obj:IsA("ProximityPrompt") or obj:IsA("ClickDetector") then
+        task.wait(0.1)
+        local part=emfGetPart(obj)
+        if part then emfMark(part) end
+    end
+end
+
+local function emfClearAll()
+    for part,_ in pairs(EMFTracked)do emfUnmark(part) end
+    EMFTracked={}
+end
+
+CI:Paragraph({Title="互动透视",Desc="高亮场景里所有可交互物体",Icon="eye"})
+CI:Toggle({Title="内部发光",Value=true,FeatureName="互动发光",Icon="sun",Callback=function(s)
+    EMFConfig.UseHighlight=s
+    if s then for part,d in pairs(EMFTracked)do if not d.hl then emfMark(part) end end
+    else for part,d in pairs(EMFTracked)do if d.hl then pcall(function()d.hl:Destroy()end) d.hl=nil end end end
+end})
+CI:Toggle({Title="方框描边",Value=false,FeatureName="互动方框",Icon="square",Callback=function(s)
+    EMFConfig.UseBox=s
+    if s then for part,d in pairs(EMFTracked)do if not d.sb then emfMark(part) end end
+    else for part,d in pairs(EMFTracked)do if d.sb then pcall(function()d.sb:Destroy()end) d.sb=nil end end end
+end})
+CI:Toggle({Title="显示文字",Value=true,FeatureName="互动文字",Icon="type",Callback=function(s)
+    EMFConfig.ShowLabel=s
+    if s then for part,d in pairs(EMFTracked)do if not d.bb then emfMark(part) end end
+    else for part,d in pairs(EMFTracked)do if d.bb then pcall(function()d.bb:Destroy()end) d.bb=nil end end end
+end})
+CI:Paragraph({Title="文字内容",Desc="改完重开透视生效",Icon="info"})
+CI:TextInput({Title="",Placeholder="默认: 互动",Value="互动",Callback=function(t)
+    if t and t~="" then
+        EMFConfig.LabelText=t
+        for _,d in pairs(EMFTracked)do if d.lbl then d.lbl.Text=t end end
+    end
+end})
+CI:Paragraph({Title="颜色",Desc="高亮颜色",Icon="palette"})
+CI:ColorPickerButton({Title="互动颜色",Default=Color3.fromRGB(0,200,255),Callback=function(color)
+    EMFConfig.Color=color
+    for _,d in pairs(EMFTracked)do
+        pcall(function() if d.hl then d.hl.FillColor=color d.hl.OutlineColor=color end end)
+        pcall(function() if d.sb then d.sb.Color3=color end end)
+        pcall(function() if d.lbl then d.lbl.TextColor3=color end end)
+    end
+end})
+CI:Toggle({Title="开启互动透视",Value=false,FeatureName="互动透视开关",Icon="eye",Callback=function(s)
 if s then
-LG.Ambient=Color3.new(1,1,1)
+    emfScanAll()
+    EMFConn=workspace.DescendantAdded:Connect(emfOnAdded)
+    N("互动透视","已开启",2)
 else
-LG.Ambient=Color3.new(0,0,0)
+    if EMFConn then EMFConn:Disconnect()EMFConn=nil end
+    emfClearAll()
+    N("互动透视","已关闭",2)
 end
 end})
-C4V:Paragraph({Title="去雾",Desc="去除游戏中的雾气效果",Icon="info"})
-C4V:Button({Text="去雾",Icon="cloud-off",Callback=function()
-LG.FogStart=3276634343
-LG.FogEnd=3276734343
-N("去雾","雾气效果已去除",3)
+
+local TN=MW:Tab({Title="夜视"})
+local C4V=TN:Category({Title="夜视",IconName="sun"})
+C4V:Paragraph({Title="夜视",Desc="开启后环境变亮，夜里也能看清",Icon="info"})
+C4V:Toggle({Title="夜视",Value=false,FeatureName="夜视",Icon="sun",Callback=function(s)
+if s then LG.Ambient=Color3.new(1,1,1)else LG.Ambient=Color3.new(0,0,0)end
+end})
+C4V:Paragraph({Title="去雾",Desc="开启后去除雾气，关闭恢复原状",Icon="info"})
+local fogOrigStart=LG.FogStart
+local fogOrigEnd=LG.FogEnd
+C4V:Toggle({Title="去雾",Value=false,FeatureName="去雾",Icon="cloud-off",Callback=function(s)
+if s then
+fogOrigStart=LG.FogStart
+fogOrigEnd=LG.FogEnd
+LG.FogStart=0
+LG.FogEnd=100000000000000000000000
+N("去雾","已开启",2)
+else
+LG.FogStart=fogOrigStart
+LG.FogEnd=fogOrigEnd
+N("去雾","已关闭",2)
+end
+end})
+
+-- ===== 去阴影 =====
+C4V:Paragraph({Title="去阴影",Desc="去掉全局阴影和所有部件的投影（手机端性能也会更好）",Icon="moon"})
+local shadowOriginals={}
+local noShadowConn=nil
+local origGlobalShadows=LG.GlobalShadows
+
+local function noShadowApply(part)
+    if part:IsA("BasePart") and part.CastShadow then
+        if shadowOriginals[part]==nil then shadowOriginals[part]=true end
+        pcall(function() part.CastShadow=false end)
+    end
+end
+
+C4V:Toggle({Title="去阴影",Value=false,FeatureName="去阴影",Icon="moon",Callback=function(s)
+    if s then
+        origGlobalShadows=LG.GlobalShadows
+        pcall(function() LG.GlobalShadows=false end)
+        for _,d in ipairs(workspace:GetDescendants())do
+            if d:IsA("BasePart") then noShadowApply(d) end
+        end
+        noShadowConn=workspace.DescendantAdded:Connect(function(d)
+            if d:IsA("BasePart") then noShadowApply(d) end
+        end)
+        N("去阴影","已开启",2)
+    else
+        pcall(function() LG.GlobalShadows=origGlobalShadows end)
+        if noShadowConn then noShadowConn:Disconnect()noShadowConn=nil end
+        for part,_ in pairs(shadowOriginals)do
+            pcall(function()
+                if part and part.Parent then part.CastShadow=true end
+            end)
+        end
+        shadowOriginals={}
+        N("去阴影","已关闭",2)
+    end
+end})
+
+local T4=MW:Tab({Title="透视"})
+local C4F=T4:Category({Title="玩家ESP",IconName="eye"})
+local ESPConfig={Enabled=false,ShowName=true,ShowHealth=false,ShowDistance=false,ShowWeapon=false,ShowTeam=false,ShowBackpack=false,FillTransparency=0.5,OutlineTransparency=0.2,TextSize=14,TextOutline=true,TeammateColor=Color3.fromRGB(0,255,100),EnemyColor=Color3.fromRGB(255,50,50),MaxDistance=2000,UseDistanceFade=true,TeamCheck=true,HighlightEnabled=true,BoxOutlineEnabled=true,WallhackEnabled=false,NameTagSize=1.0,HealthBarEnabled=true,DistanceScale=true,UpdateRate=30}
+local ESPCache={}
+local LastUpdateTime=0
+local function CalcVis(d,mx)if d>mx then return 0 end local fs=mx*0.8 if d>fs then return 1-((d-fs)/(mx-fs))end return 1 end
+local function CalcColor(esp,hum,d)local isT=ESPConfig.TeamCheck and esp.Player.Team==LP.Team return isT and ESPConfig.TeammateColor or ESPConfig.EnemyColor end
+local function IsBehindWall(c)if not ESPConfig.WallhackEnabled then return false end local hrp=c:FindFirstChild("HumanoidRootPart")if not hrp then return true end local ray=Ray.new(Cam.CFrame.Position,(hrp.Position-Cam.CFrame.Position).Unit*100)local f={Cam}if LP.Character then table.insert(f,LP.Character)end table.insert(f,c)local part,_=workspace:FindPartOnRayWithIgnoreList(ray,f)return part~=nil end
+local function GetWeapon(c)local t=c:FindFirstChildOfClass("Tool")return t and t.Name or "没武器" end
+local function GetBackpack(p)local w={}if p:FindFirstChild("Backpack")then for _,t in ipairs(p.Backpack:GetChildren())do if t:IsA("Tool")then table.insert(w,t.Name)end end end return #w>0 and table.concat(w,", ")or "没武器" end
+local CleanupESP
+local function CreateESP(c,p)
+if not c or not c.Parent or ESPCache[c]then return end
+local hrp=c:FindFirstChild("HumanoidRootPart")if not hrp then return end
+local esp={Character=c,Player=p,Highlight=nil,Billboard=nil,HealthBar=nil,Connections={}}
+esp.Highlight=Instance.new("Highlight")esp.Highlight.Name="ESP_HL"esp.Highlight.FillColor=Color3.new(1,1,1)esp.Highlight.OutlineColor=Color3.new(0,0,0)esp.Highlight.FillTransparency=ESPConfig.FillTransparency esp.Highlight.OutlineTransparency=ESPConfig.OutlineTransparency esp.Highlight.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop esp.Highlight.Enabled=ESPConfig.Enabled and ESPConfig.HighlightEnabled esp.Highlight.Parent=c
+esp.Billboard=Instance.new("BillboardGui")esp.Billboard.Name="ESP_BB"esp.Billboard.AlwaysOnTop=true esp.Billboard.Size=UDim2.new(0,200*ESPConfig.NameTagSize,0,60*ESPConfig.NameTagSize)esp.Billboard.StudsOffset=Vector3.new(0,3,0)esp.Billboard.Adornee=hrp esp.Billboard.Enabled=ESPConfig.Enabled esp.Billboard.MaxDistance=ESPConfig.MaxDistance esp.Billboard.Parent=c
+local lbl=Instance.new("TextLabel")lbl.Name="ESP_LBL"lbl.BackgroundTransparency=1 lbl.Size=UDim2.new(1,0,1,0)lbl.TextColor3=Color3.new(1,1,1)lbl.TextSize=ESPConfig.TextSize*ESPConfig.NameTagSize lbl.Font=Enum.Font.SourceSansBold lbl.TextStrokeTransparency=ESPConfig.TextOutline and 0.5 or 1 lbl.TextStrokeColor3=Color3.new(0,0,0)lbl.Text=""lbl.ZIndex=10 lbl.Parent=esp.Billboard
+if ESPConfig.HealthBarEnabled then
+local hb=Instance.new("Frame")hb.Name="ESP_HB"hb.BackgroundColor3=Color3.new(0.2,0.2,0.2)hb.BorderSizePixel=0 hb.Size=UDim2.new(1,0,0,4*ESPConfig.NameTagSize)hb.Position=UDim2.new(0,0,1,0)hb.ZIndex=11 hb.Parent=esp.Billboard
+local hf=Instance.new("Frame")hf.Name="ESP_HF"hf.BackgroundColor3=Color3.new(0,1,0)hf.BorderSizePixel=0 hf.Size=UDim2.new(1,0,1,0)hf.ZIndex=12 hf.Parent=hb
+esp.HealthBar=hf
+end
+esp.Connections.cr=c.AncestryChanged:Connect(function(_,par)if not par then CleanupESP(c)end end)
+ESPCache[c]=esp
+end
+CleanupESP=function(c)
+local esp=ESPCache[c]
+if esp then
+for _,cn in pairs(esp.Connections)do cn:Disconnect()end
+if esp.Highlight then esp.Highlight:Destroy()end
+if esp.Billboard then esp.Billboard:Destroy()end
+ESPCache[c]=nil
+end
+end
+local function UpdateESP()
+local ct=tick()
+if ct-LastUpdateTime<(1/ESPConfig.UpdateRate)then return end
+LastUpdateTime=ct
+if not ESPConfig.Enabled then
+for _,esp in pairs(ESPCache)do
+if esp.Highlight then esp.Highlight.Enabled=false end
+if esp.Billboard then esp.Billboard.Enabled=false end
+end
+return
+end
+for c,esp in pairs(ESPCache)do
+if not c or not c.Parent then CleanupESP(c)continue end
+local hrp=c:FindFirstChild("HumanoidRootPart")if not hrp then continue end
+local hum=c:FindFirstChildOfClass("Humanoid")
+if not hum or hum.Health<=0 then
+if esp.Highlight then esp.Highlight.Enabled=false end
+if esp.Billboard then esp.Billboard.Enabled=false end
+continue
+end
+local d=(hrp.Position-Cam.CFrame.Position).Magnitude
+local v=CalcVis(d,ESPConfig.MaxDistance)
+if v<=0 then
+if esp.Highlight then esp.Highlight.Enabled=false end
+if esp.Billboard then esp.Billboard.Enabled=false end
+continue
+end
+local col=CalcColor(esp,hum,d)
+local am=ESPConfig.UseDistanceFade and v or 1
+local bw=IsBehindWall(c)
+if esp.Highlight then
+esp.Highlight.FillColor=col esp.Highlight.OutlineColor=Color3.new(0,0,0)
+esp.Highlight.FillTransparency=ESPConfig.FillTransparency+(0.3*(1-am))
+if ESPConfig.BoxOutlineEnabled then esp.Highlight.OutlineTransparency=ESPConfig.OutlineTransparency+(0.3*(1-am))else esp.Highlight.OutlineTransparency=1 end
+esp.Highlight.Enabled=ESPConfig.HighlightEnabled and(not bw or ESPConfig.WallhackEnabled)
+end
+local lbl=esp.Billboard:FindFirstChildOfClass("TextLabel")
+if lbl then
+local parts={}
+if ESPConfig.ShowName then table.insert(parts,esp.Player.Name)end
+if ESPConfig.ShowHealth then table.insert(parts,string.format("HP: %d/%d",math.floor(hum.Health),math.floor(hum.MaxHealth)))end
+if ESPConfig.ShowDistance then table.insert(parts,string.format("%dm",math.floor(d)))end
+if ESPConfig.ShowWeapon then table.insert(parts,GetWeapon(c))end
+if ESPConfig.ShowBackpack then local bwp=GetBackpack(esp.Player)if bwp~="没武器"then table.insert(parts,"背包: "..bwp)end end
+if ESPConfig.ShowTeam then local isT=ESPConfig.TeamCheck and esp.Player.Team==LP.Team table.insert(parts,isT and "队友"or "敌人")end
+if bw and ESPConfig.WallhackEnabled then table.insert(parts,"[墙后]")end
+lbl.Text=table.concat(parts," | ")
+lbl.TextColor3=col
+lbl.TextTransparency=ESPConfig.UseDistanceFade and(0.3*(1-am))or 0
+lbl.TextSize=ESPConfig.TextSize*(ESPConfig.DistanceScale and math.clamp(1.5-(d/1000)*0.5,0.8,1.5)or 1)*ESPConfig.NameTagSize
+esp.Billboard.Enabled=#parts>0 and(not bw or ESPConfig.WallhackEnabled)
+end
+if esp.HealthBar then
+local hp=hum.Health/hum.MaxHealth
+esp.HealthBar.Size=UDim2.new(hp,0,1,0)
+esp.HealthBar.BackgroundColor3=Color3.new(1-hp,hp,0)
+end
+end
+end
+local function RecreateAllESP()
+for c,_ in pairs(ESPCache)do CleanupESP(c)end
+if ESPConfig.Enabled then
+for _,p in ipairs(Players:GetPlayers())do
+if p~=LP and p.Character then CreateESP(p.Character,p)end
+end
+end
+UpdateESP()
+end
+local function InitPlayerESP(p)
+if p==LP then return end
+local function CharAdd(c)task.wait(0.5)if ESPConfig.Enabled then CreateESP(c,p)end end
+if p.Character and ESPConfig.Enabled then task.spawn(CharAdd,p.Character)end
+p.CharacterAdded:Connect(CharAdd)
+p.CharacterRemoving:Connect(function(c)CleanupESP(c)end)
+end
+RS.Heartbeat:Connect(function()if not LP.Character then return end pcall(UpdateESP)end)
+if ESPConfig.Enabled then
+for _,p in ipairs(Players:GetPlayers())do if p~=LP then InitPlayerESP(p)end end
+end
+Players.PlayerAdded:Connect(InitPlayerESP)
+C4F:Paragraph({Title="ESP 主开关",Desc="开启后下方元素生效",Icon="info"})
+C4F:Toggle({Title="开启ESP",Value=false,FeatureName="ESP",Icon="eye",Callback=function(s)
+ESPConfig.Enabled=s
+if s then RecreateAllESP()
+else
+for c,esp in pairs(ESPCache)do
+if esp.Highlight then esp.Highlight:Destroy()end
+if esp.Billboard then esp.Billboard:Destroy()end
+end
+ESPCache={}
+end
+end})
+C4F:Paragraph({Title="视觉效果",Desc="Highlight 的填充和描边",Icon="info"})
+C4F:Toggle({Title="内部发光",Value=false,FeatureName="发光",Icon="sun",Callback=function(s)
+ESPConfig.HighlightEnabled=s
+for _,esp in pairs(ESPCache)do if esp.Highlight then esp.Highlight.Enabled=s and ESPConfig.Enabled end end
+end})
+C4F:Toggle({Title="方框描边",Value=false,FeatureName="描边",Icon="square",Callback=function(s)
+ESPConfig.BoxOutlineEnabled=s
+for _,esp in pairs(ESPCache)do if esp.Highlight then esp.Highlight.OutlineTransparency=s and ESPConfig.OutlineTransparency or 1 end end
+end})
+C4F:Paragraph({Title="显示内容",Desc="勾选你想看的元素",Icon="info"})
+C4F:Toggle({Title="显示玩家名字",Value=true,FeatureName="名字",Icon="type",Callback=function(s)ESPConfig.ShowName=s UpdateESP()end})
+C4F:Toggle({Title="显示血量",Value=false,FeatureName="血量",Icon="heart",Callback=function(s)ESPConfig.ShowHealth=s UpdateESP()end})
+C4F:Toggle({Title="显示距离",Value=false,FeatureName="距离",Icon="ruler",Callback=function(s)ESPConfig.ShowDistance=s UpdateESP()end})
+C4F:Toggle({Title="显示武器",Value=false,FeatureName="武器",Icon="sword",Callback=function(s)ESPConfig.ShowWeapon=s UpdateESP()end})
+C4F:Toggle({Title="显示背包",Value=false,FeatureName="背包",Icon="package",Callback=function(s)ESPConfig.ShowBackpack=s UpdateESP()end})
+C4F:Toggle({Title="显示队伍",Value=false,FeatureName="队伍",Icon="users",Callback=function(s)ESPConfig.ShowTeam=s UpdateESP()end})
+C4F:Paragraph({Title="颜色",Desc="自定义队友和敌人的颜色",Icon="palette"})
+C4F:ColorPickerButton({Title="队友颜色",Default=Color3.fromRGB(0,255,100),Callback=function(color,alpha)ESPConfig.TeammateColor=color UpdateESP()end})
+C4F:ColorPickerButton({Title="敌人颜色",Default=Color3.fromRGB(255,50,50),Callback=function(color,alpha)ESPConfig.EnemyColor=color UpdateESP()end})
+C4F:Paragraph({Title="高级检测",Desc="队伍 / 穿墙 / 距离",Icon="info"})
+C4F:Toggle({Title="队伍检测",Value=true,FeatureName="队伍检测",Icon="users",Callback=function(s)ESPConfig.TeamCheck=s UpdateESP()end})
+C4F:Toggle({Title="穿墙显示",Value=false,FeatureName="穿墙",Icon="shield-off",Callback=function(s)ESPConfig.WallhackEnabled=s UpdateESP()end})
+C4F:Toggle({Title="距离缩放",Value=true,FeatureName="距离缩放",Icon="maximize",Callback=function(s)ESPConfig.DistanceScale=s UpdateESP()end})
+C4F:Toggle({Title="距离淡化",Value=true,FeatureName="距离淡化",Icon="eye-off",Callback=function(s)ESPConfig.UseDistanceFade=s UpdateESP()end})
+C4F:Paragraph({Title="其他",Desc="距离和样式",Icon="info"})
+C4F:Slider({Title="最大距离",Min=500,Max=5000,Default=2000,Ticks=45,Callback=function(v)ESPConfig.MaxDistance=v end})
+C4F:Slider({Title="名字大小",Min=0.5,Max=2,Default=1,Ticks=15,Callback=function(v)
+ESPConfig.NameTagSize=v
+if ESPConfig.Enabled then RecreateAllESP()end
 end})
 
 local TF=MW:Tab({Title="滤镜与光影"})
@@ -357,139 +828,141 @@ CF2:Button({Text="绿色",Icon="palette",Callback=function()LG.Ambient=Color3.ne
 CF2:Button({Text="蓝色",Icon="palette",Callback=function()LG.Ambient=Color3.new(0,0,1)end})
 local CF3=TF:Category({Title="一键滤镜",IconName="sparkles"})
 CF3:Paragraph({Title="内置滤镜",Desc="点一下直接应用",Icon="info"})
-local function clearPost()
-for _,v in ipairs(LG:GetDescendants())do
-if v:IsA("PostEffect")and v.Name:sub(1,4)=="TXH_"then v:Destroy()end
-end
-end
-CF3:Button({Text="电影感",Icon="video",Callback=function()
-clearPost()
-local cc=Instance.new("ColorCorrectionEffect")cc.Name="TXH_CC"cc.Saturation=0.1 cc.Contrast=0.2 cc.Brightness=-0.05 cc.Parent=LG
-LG.FogColor=Color3.fromRGB(80,80,90)LG.FogEnd=600
-N("滤镜","电影感",2)
-end})
-CF3:Button({Text="鲜艳",Icon="palette",Callback=function()
-clearPost()
-local cc=Instance.new("ColorCorrectionEffect")cc.Name="TXH_CC"cc.Saturation=0.5 cc.Contrast=0.15 cc.Brightness=0.05 cc.Parent=LG
-N("滤镜","鲜艳",2)
-end})
-CF3:Button({Text="暗黑",Icon="moon",Callback=function()
-clearPost()
-local cc=Instance.new("ColorCorrectionEffect")cc.Name="TXH_CC"cc.Saturation=-0.3 cc.Contrast=0.4 cc.Brightness=-0.2 cc.Parent=LG
-LG.Ambient=Color3.new(0.1,0.1,0.1)
-N("滤镜","暗黑",2)
-end})
-CF3:Button({Text="复古",Icon="camera",Callback=function()
-clearPost()
-local cc=Instance.new("ColorCorrectionEffect")cc.Name="TXH_CC"cc.Saturation=-0.2 cc.TintColor=Color3.fromRGB(255,220,180)cc.Contrast=0.1 cc.Parent=LG
-N("滤镜","复古",2)
-end})
-CF3:Button({Text="霓虹",Icon="sparkles",Callback=function()
-clearPost()
-local b=Instance.new("BloomEffect")b.Name="TXH_Bloom"b.Intensity=2 b.Size=30 b.Threshold=0.6 b.Parent=LG
-local cc=Instance.new("ColorCorrectionEffect")cc.Name="TXH_CC"cc.Saturation=0.4 cc.Parent=LG
-N("滤镜","霓虹",2)
-end})
-CF3:Button({Text="恢复原状",Icon="refresh-cw",Callback=function()
-clearPost()
-LG.Ambient=Color3.fromRGB(0,0,0)
-LG.OutdoorAmbient=Color3.fromRGB(128,128,128)
-LG.Brightness=1
-LG.ExposureCompensation=0
-LG.FogStart=0
-LG.FogEnd=1000
-LG.FogColor=Color3.fromRGB(192,192,192)
-N("滤镜","已恢复原状",2)
-end})
+local function clearPost()for _,v in ipairs(LG:GetDescendants())do if v:IsA("PostEffect")and v.Name:sub(1,4)=="TXH_"then v:Destroy()end end end
+CF3:Button({Text="电影感",Icon="video",Callback=function()clearPost()local cc=Instance.new("ColorCorrectionEffect")cc.Name="TXH_CC"cc.Saturation=0.1 cc.Contrast=0.2 cc.Brightness=-0.05 cc.Parent=LG LG.FogColor=Color3.fromRGB(80,80,90)LG.FogEnd=600 N("滤镜","电影感",2)end})
+CF3:Button({Text="鲜艳",Icon="palette",Callback=function()clearPost()local cc=Instance.new("ColorCorrectionEffect")cc.Name="TXH_CC"cc.Saturation=0.5 cc.Contrast=0.15 cc.Brightness=0.05 cc.Parent=LG N("滤镜","鲜艳",2)end})
+CF3:Button({Text="暗黑",Icon="moon",Callback=function()clearPost()local cc=Instance.new("ColorCorrectionEffect")cc.Name="TXH_CC"cc.Saturation=-0.3 cc.Contrast=0.4 cc.Brightness=-0.2 cc.Parent=LG LG.Ambient=Color3.new(0.1,0.1,0.1)N("滤镜","暗黑",2)end})
+CF3:Button({Text="复古",Icon="camera",Callback=function()clearPost()local cc=Instance.new("ColorCorrectionEffect")cc.Name="TXH_CC"cc.Saturation=-0.2 cc.TintColor=Color3.fromRGB(255,220,180)cc.Contrast=0.1 cc.Parent=LG N("滤镜","复古",2)end})
+CF3:Button({Text="霓虹",Icon="sparkles",Callback=function()clearPost()local b=Instance.new("BloomEffect")b.Name="TXH_Bloom"b.Intensity=2 b.Size=30 b.Threshold=0.6 b.Parent=LG local cc=Instance.new("ColorCorrectionEffect")cc.Name="TXH_CC"cc.Saturation=0.4 cc.Parent=LG N("滤镜","霓虹",2)end})
+CF3:Button({Text="恢复原状",Icon="refresh-cw",Callback=function()clearPost()LG.Ambient=Color3.fromRGB(0,0,0)LG.OutdoorAmbient=Color3.fromRGB(128,128,128)LG.Brightness=1 LG.ExposureCompensation=0 LG.FogStart=0 LG.FogEnd=1000 LG.FogColor=Color3.fromRGB(192,192,192)N("滤镜","已恢复原状",2)end})
 
-local TA=MW:Tab({Title="动画区"})
-local animLooped=false
-local animSpeed=1
-local curAnimTrack=nil
-local function applyAnim(animId)
-local c=LP.Character
-if not c then return end
-local animate=c:FindFirstChild("Animate")
-local hum=c:FindFirstChildOfClass("Humanoid")
-if not(animate and hum)then return end
-animate.Disabled=true
-for _,t in pairs(hum:GetPlayingAnimationTracks())do t:Stop()end
-if animate:FindFirstChild("idle")then
-animate.idle.Animation1.AnimationId=animId
-animate.idle.Animation2.AnimationId=animId
+-- ============ 动画区（手机端兼容版·修复版） ============
+local TA=MW:Tab({Title="动画"})
+local CA=TA:Category({Title="动画包",IconName="star"})
+
+local function LoadTrack(hum,anim)
+    local animator=hum:FindFirstChildOfClass("Animator")
+    if animator then return animator:LoadAnimation(anim) end
+    return hum:LoadAnimation(anim)
 end
-if animate:FindFirstChild("walk")then animate.walk.WalkAnim.AnimationId=animId end
-if animate:FindFirstChild("run")then animate.run.RunAnim.AnimationId=animId end
-if animate:FindFirstChild("jump")then animate.jump.JumpAnim.AnimationId=animId end
-if animate:FindFirstChild("climb")then animate.climb.ClimbAnim.AnimationId=animId end
-if animate:FindFirstChild("fall")then animate.fall.FallAnim.AnimationId=animId end
-hum:ChangeState(3)
-animate.Disabled=false
+
+local function SetAnimations(animData, packName)
+    local c=LP.Character
+    if not c then N("错误","角色未加载",3) return end
+    local Animate=c:FindFirstChild("Animate")
+    local hum=c:FindFirstChildOfClass("Humanoid")
+    if not (Animate and hum) then N("错误","缺少 Animate/Humanoid",3) return end
+    Animate.Disabled=true
+    for _,track in pairs(hum:GetPlayingAnimationTracks()) do
+        pcall(function() track:Stop() end)
+    end
+    pcall(function() Animate.idle.Animation1.AnimationId=animData.idle1 end)
+    pcall(function() Animate.idle.Animation2.AnimationId=animData.idle2 end)
+    pcall(function() Animate.walk.WalkAnim.AnimationId=animData.walk end)
+    pcall(function() Animate.run.RunAnim.AnimationId=animData.run end)
+    pcall(function() Animate.jump.JumpAnim.AnimationId=animData.jump end)
+    pcall(function() Animate.climb.ClimbAnim.AnimationId=animData.climb end)
+    pcall(function() Animate.fall.FallAnim.AnimationId=animData.fall end)
+    pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+    Animate.Disabled=false
+    N("动画",(packName or "动画").." 已应用",3)
 end
-local CA2=TA:Category({Title="预设动画",IconName="star"})
-CA2:Paragraph({Title="经典动画",Desc="点一下切换成对应动画（会替换你当前动画包）",Icon="info"})
-local presets={
-{name="吸血鬼",id="1083445855"},{name="英雄",id="616111295"},{name="僵尸",id="616158929"},{name="法师",id="707742142"},{name="幽灵",id="616006778"},{name="老年人",id="845397899"},{name="宇航员",id="891621366"},{name="忍者",id="656117400"},{name="狼人",id="1083195517"},{name="卡通",id="742637544"},{name="海盗",id="750781874"},{name="潜行",id="1132473842"},{name="玩具",id="782841498"},{name="骑士",id="657595757"},{name="自信",id="1069977950"},{name="流行明星",id="1212900985"},{name="公主",id="941003647"},{name="牛仔",id="1014390418"},{name="巡逻",id="1149612882"},{name="FE僵尸",id="3489171152"}
+
+local AnimationPacks={
+    {name="吸血鬼",data={idle1="http://www.roblox.com/asset/?id=1083445855",idle2="http://www.roblox.com/asset/?id=1083450166",walk="http://www.roblox.com/asset/?id=1083473930",run="http://www.roblox.com/asset/?id=1083462077",jump="http://www.roblox.com/asset/?id=1083455352",climb="http://www.roblox.com/asset/?id=1083439238",fall="http://www.roblox.com/asset/?id=1083443587"}},
+    {name="英雄",data={idle1="http://www.roblox.com/asset/?id=616111295",idle2="http://www.roblox.com/asset/?id=616113536",walk="http://www.roblox.com/asset/?id=616122287",run="http://www.roblox.com/asset/?id=616117076",jump="http://www.roblox.com/asset/?id=616115533",climb="http://www.roblox.com/asset/?id=616104706",fall="http://www.roblox.com/asset/?id=616108001"}},
+    {name="经典僵尸",data={idle1="http://www.roblox.com/asset/?id=616158929",idle2="http://www.roblox.com/asset/?id=616160636",walk="http://www.roblox.com/asset/?id=616168032",run="http://www.roblox.com/asset/?id=616163682",jump="http://www.roblox.com/asset/?id=616161997",climb="http://www.roblox.com/asset/?id=616156119",fall="http://www.roblox.com/asset/?id=616157476"}},
+    {name="法师",data={idle1="http://www.roblox.com/asset/?id=707742142",idle2="http://www.roblox.com/asset/?id=707855907",walk="http://www.roblox.com/asset/?id=707897309",run="http://www.roblox.com/asset/?id=707861613",jump="http://www.roblox.com/asset/?id=707853694",climb="http://www.roblox.com/asset/?id=707826056",fall="http://www.roblox.com/asset/?id=707829716"}},
+    {name="幽灵",data={idle1="http://www.roblox.com/asset/?id=616006778",idle2="http://www.roblox.com/asset/?id=616008087",walk="http://www.roblox.com/asset/?id=616010382",run="http://www.roblox.com/asset/?id=616013216",jump="http://www.roblox.com/asset/?id=616008936",climb="http://www.roblox.com/asset/?id=616003713",fall="http://www.roblox.com/asset/?id=616005863"}},
+    {name="长者",data={idle1="http://www.roblox.com/asset/?id=845397899",idle2="http://www.roblox.com/asset/?id=845400520",walk="http://www.roblox.com/asset/?id=845403856",run="http://www.roblox.com/asset/?id=845386501",jump="http://www.roblox.com/asset/?id=845398858",climb="http://www.roblox.com/asset/?id=845392038",fall="http://www.roblox.com/asset/?id=845396048"}},
+    {name="悬浮",data={idle1="http://www.roblox.com/asset/?id=616006778",idle2="http://www.roblox.com/asset/?id=616008087",walk="http://www.roblox.com/asset/?id=616013216",run="http://www.roblox.com/asset/?id=616010382",jump="http://www.roblox.com/asset/?id=616008936",climb="http://www.roblox.com/asset/?id=616003713",fall="http://www.roblox.com/asset/?id=616005863"}},
+    {name="宇航员",data={idle1="http://www.roblox.com/asset/?id=891621366",idle2="http://www.roblox.com/asset/?id=891633237",walk="http://www.roblox.com/asset/?id=891667138",run="http://www.roblox.com/asset/?id=891636393",jump="http://www.roblox.com/asset/?id=891627522",climb="http://www.roblox.com/asset/?id=891609353",fall="http://www.roblox.com/asset/?id=891617961"}},
+    {name="忍者",data={idle1="http://www.roblox.com/asset/?id=656117400",idle2="http://www.roblox.com/asset/?id=656118341",walk="http://www.roblox.com/asset/?id=656121766",run="http://www.roblox.com/asset/?id=656118852",jump="http://www.roblox.com/asset/?id=656117878",climb="http://www.roblox.com/asset/?id=656114359",fall="http://www.roblox.com/asset/?id=656115606"}},
+    {name="狼人",data={idle1="http://www.roblox.com/asset/?id=1083195517",idle2="http://www.roblox.com/asset/?id=1083214717",walk="http://www.roblox.com/asset/?id=1083178339",run="http://www.roblox.com/asset/?id=1083216690",jump="http://www.roblox.com/asset/?id=1083218792",climb="http://www.roblox.com/asset/?id=1083182000",fall="http://www.roblox.com/asset/?id=1083189019"}},
+    {name="卡通",data={idle1="http://www.roblox.com/asset/?id=742637544",idle2="http://www.roblox.com/asset/?id=742638445",walk="http://www.roblox.com/asset/?id=742640026",run="http://www.roblox.com/asset/?id=742638842",jump="http://www.roblox.com/asset/?id=742637942",climb="http://www.roblox.com/asset/?id=742636889",fall="http://www.roblox.com/asset/?id=742637151"}},
+    {name="海盗",data={idle1="http://www.roblox.com/asset/?id=750781874",idle2="http://www.roblox.com/asset/?id=750782770",walk="http://www.roblox.com/asset/?id=750785693",run="http://www.roblox.com/asset/?id=750783738",jump="http://www.roblox.com/asset/?id=750782230",climb="http://www.roblox.com/asset/?id=750779899",fall="http://www.roblox.com/asset/?id=750780242"}},
+    {name="潜行",data={idle1="http://www.roblox.com/asset/?id=1132473842",idle2="http://www.roblox.com/asset/?id=1132477671",walk="http://www.roblox.com/asset/?id=1132510133",run="http://www.roblox.com/asset/?id=1132494274",jump="http://www.roblox.com/asset/?id=1132489853",climb="http://www.roblox.com/asset/?id=1132461372",fall="http://www.roblox.com/asset/?id=1132469004"}},
+    {name="玩具",data={idle1="http://www.roblox.com/asset/?id=782841498",idle2="http://www.roblox.com/asset/?id=782845736",walk="http://www.roblox.com/asset/?id=782843345",run="http://www.roblox.com/asset/?id=782842708",jump="http://www.roblox.com/asset/?id=782847020",climb="http://www.roblox.com/asset/?id=782843869",fall="http://www.roblox.com/asset/?id=782846423"}},
+    {name="骑士",data={idle1="http://www.roblox.com/asset/?id=657595757",idle2="http://www.roblox.com/asset/?id=657568135",walk="http://www.roblox.com/asset/?id=657552124",run="http://www.roblox.com/asset/?id=657564596",jump="http://www.roblox.com/asset/?id=658409194",climb="http://www.roblox.com/asset/?id=658360781",fall="http://www.roblox.com/asset/?id=657600338"}},
+    {name="自信",data={idle1="http://www.roblox.com/asset/?id=1069977950",idle2="http://www.roblox.com/asset/?id=1069987858",walk="http://www.roblox.com/asset/?id=1070017263",run="http://www.roblox.com/asset/?id=1070001516",jump="http://www.roblox.com/asset/?id=1069984524",climb="http://www.roblox.com/asset/?id=1069946257",fall="http://www.roblox.com/asset/?id=1069973677"}},
+    {name="流行明星",data={idle1="http://www.roblox.com/asset/?id=1212900985",idle2="http://www.roblox.com/asset/?id=1212900985",walk="http://www.roblox.com/asset/?id=1212980338",run="http://www.roblox.com/asset/?id=1212980348",jump="http://www.roblox.com/asset/?id=1212954642",climb="http://www.roblox.com/asset/?id=1213044953",fall="http://www.roblox.com/asset/?id=1212900995"}},
+    {name="公主",data={idle1="http://www.roblox.com/asset/?id=941003647",idle2="http://www.roblox.com/asset/?id=941013098",walk="http://www.roblox.com/asset/?id=941028902",run="http://www.roblox.com/asset/?id=941015281",jump="http://www.roblox.com/asset/?id=941008832",climb="http://www.roblox.com/asset/?id=940996062",fall="http://www.roblox.com/asset/?id=941000007"}},
+    {name="牛仔",data={idle1="http://www.roblox.com/asset/?id=1014390418",idle2="http://www.roblox.com/asset/?id=1014398616",walk="http://www.roblox.com/asset/?id=1014421541",run="http://www.roblox.com/asset/?id=1014401683",jump="http://www.roblox.com/asset/?id=1014394726",climb="http://www.roblox.com/asset/?id=1014380606",fall="http://www.roblox.com/asset/?id=1014384571"}},
+    {name="巡逻",data={idle1="http://www.roblox.com/asset/?id=1149612882",idle2="http://www.roblox.com/asset/?id=1150842221",walk="http://www.roblox.com/asset/?id=1151231493",run="http://www.roblox.com/asset/?id=1150967949",jump="http://www.roblox.com/asset/?id=1150944216",climb="http://www.roblox.com/asset/?id=1148811837",fall="http://www.roblox.com/asset/?id=1148863382"}},
 }
-for _,p in ipairs(presets)do
-CA2:Button({Text=p.name,Icon="play",Callback=function()
-local ok,err=pcall(function()applyAnim("http://www.roblox.com/asset/?id="..p.id)end)
-if ok then N("动画",p.name.." 已应用",2)else N("失败",tostring(err):sub(1,80),4)end
-end})
+
+for _,pack in ipairs(AnimationPacks) do
+    CA:Button({Text=pack.name,Icon="play",Callback=function()
+        local c=LP.Character
+        if c and c:FindFirstChild("Animate") then
+            local ok,err=pcall(SetAnimations,pack.data,pack.name)
+            if not ok then N("错误",tostring(err):sub(1,80),4) end
+        else
+            N("错误","角色未加载完成，请稍后再试",3)
+        end
+    end})
 end
-local CA3=TA:Category({Title="动画Emotes",IconName="play"})
-local emoteId=""
-CA3:Paragraph({Title="输入动画ID",Desc="支持数字ID或 rbxassetid://xxx",Icon="info"})
-CA3:TextInput({Title="",Placeholder="输入动画ID",Value="",Callback=function(v)
-local id=string.match(v,"id=(%d+)")
-if id then emoteId="rbxassetid://"..id
-elseif v:find("rbxassetid://")then emoteId=v
-elseif tonumber(v)then emoteId="rbxassetid://"..v
-else emoteId=v end
-end})
-CA3:Button({Text="播放动画",Icon="play",Callback=function()
-if emoteId==""then N("错误","请输入动画ID",2)return end
-local ok,err=pcall(function()
-local c=LP.Character
-if not c then return end
-local hum=c:FindFirstChildOfClass("Humanoid")
-if not hum then return end
-local anim=Instance.new("Animation")
-anim.AnimationId=emoteId
-curAnimTrack=hum:LoadAnimation(anim)
-curAnimTrack.Looped=animLooped
-curAnimTrack:Play()
-curAnimTrack:AdjustSpeed(animSpeed)
-end)
-if ok then N("动画","播放中",2)else N("失败",tostring(err):sub(1,80),4)end
-end})
-CA3:Button({Text="停止所有动画",Icon="square",Callback=function()
-pcall(function()
-local c=LP.Character
-if c then
-local hum=c:FindFirstChildOfClass("Humanoid")
-if hum then
-for _,t in pairs(hum:GetPlayingAnimationTracks())do t:Stop()end
+
+local CA2=TA:Category({Title="自定义动画",IconName="play"})
+local active={}
+local curTrack=nil
+local looped=true
+local animSpeed=1
+
+local function playAnimation(id,speed,timepos)
+    local c=LP.Character
+    if not c then N("错误","角色未加载",3) return end
+    local hum=c:FindFirstChildOfClass("Humanoid")
+    if not hum then N("错误","缺少 Humanoid",3) return end
+    for _,track in pairs(active) do
+        if track then pcall(function() track:Stop() end) end
+    end
+    active={}
+    local anim=Instance.new("Animation")
+    anim.AnimationId="rbxassetid://"..id
+    local track=LoadTrack(hum,anim)
+    if track then
+        track.Looped=looped
+        track:Play()
+        track:AdjustSpeed(speed or animSpeed)
+        track.TimePosition=timepos or 0
+        active[id]=track
+        curTrack=track
+        N("动画","播放 "..id,2)
+    end
 end
-end
-end)
-N("动画","已停止",2)
+
+CA2:Paragraph({Title="输入动画ID",Desc="支持纯数字ID，如 507776043",Icon="info"})
+local animIdInput=""
+CA2:TextInput({Title="",Placeholder="输入动画ID",Value="",Callback=function(v) animIdInput=v end})
+CA2:Button({Text="播放动画",Icon="play",Callback=function()
+    if animIdInput=="" then N("错误","请输入动画ID",2) return end
+    local id=string.match(animIdInput,"id=(%d+)") or string.match(animIdInput,"rbxassetid://(%d+)") or animIdInput
+    if not tonumber(id) then N("错误","ID无效",2) return end
+    pcall(playAnimation,tostring(id),animSpeed,0)
 end})
-CA3:Paragraph({Title="是否循环",Desc="开启后动画会重复播放",Icon="info"})
-CA3:Toggle({Title="循环",Value=false,FeatureName="循环",Icon="repeat",Callback=function(s)animLooped=s if curAnimTrack then curAnimTrack.Looped=s end end})
-CA3:Paragraph({Title="动画速度",Desc="0~10，1是正常速度",Icon="info"})
-CA3:Slider({Title="速度",Min=0,Max=10,Default=1,Ticks=20,Callback=function(v)
-animSpeed=v
-pcall(function()
-local c=LP.Character
-if c then
-local hum=c:FindFirstChildOfClass("Humanoid")
-if hum then
-for _,t in pairs(hum:GetPlayingAnimationTracks())do t:AdjustSpeed(v)end
-end
-end
-end)
+CA2:Button({Text="停止所有动画",Icon="square",Callback=function()
+    pcall(function()
+        local c=LP.Character
+        if c then
+            local hum=c:FindFirstChildOfClass("Humanoid")
+            if hum then
+                for _,t in pairs(hum:GetPlayingAnimationTracks()) do t:Stop() end
+            end
+        end
+    end)
+    active={} curTrack=nil
+    N("动画","已停止",2)
 end})
+CA2:Toggle({Title="循环播放",Value=true,FeatureName="循环",Icon="repeat",Callback=function(s)
+    looped=s
+    if curTrack then curTrack.Looped=s end
+end})
+CA2:Slider({Title="动画速度",Min=0,Max=10,Default=1,Ticks=20,Callback=function(v)
+    animSpeed=v
+    if curTrack then pcall(function() curTrack:AdjustSpeed(v) end) end
+end})
+-- ============ 动画区结束 ============
 
 local T5=MW:Tab({Title="杂项"})
 local C5=T5:Category({Title="快捷操作",IconName="zap"})
